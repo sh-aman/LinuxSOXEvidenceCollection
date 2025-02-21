@@ -1,0 +1,49 @@
+schemaVersion: '2.2'
+description: "SSM Document to consolidate the SSSD access permissions information  "
+mainSteps:
+  - name: CreateDirectories
+    action: aws:runShellScript
+    inputs:
+      runCommand:
+        - "rm -rf /tmp/IT.MA.03.LinuxServers/"
+        - "mkdir -p /tmp/IT.MA.03.LinuxServers/"
+
+  - name: DownloadFromS3
+    action: aws:runShellScript
+    inputs:
+      runCommand:
+        - "aws s3 cp s3://cops-sox-evidence/ /tmp/IT.MA.03.LinuxServers/ --recursive --exclude '*' --include '*.xlsx'"
+
+  - name: RunRemoteScript
+    action: aws:runDocument
+    inputs:
+      DocumentName: "AWS-RunRemoteScript"
+      Parameters:
+        sourceType: "GitHub"
+        sourceInfo: |
+          {
+            "owner": "your-github-org-or-user",
+            "repository": "your-repo-name",
+            "path": "your-script.py",
+            "branch": "your-branch-name",
+            "tokenInfo": "your-github-token-secret-name"
+          }
+        commandLine: "python3 /tmp/IT.MA.03.LinuxServers/your-script.py"
+
+  - name: WaitForCompletion
+    action: aws:runShellScript
+    inputs:
+      runCommand:
+        - "sleep 5"
+
+  - name: UploadToS3
+    action: aws:runShellScript
+    inputs:
+      runCommand:
+        - "aws s3 cp /tmp/IT.MA.03.LinuxServers/Consolidated_SSSD_Access_Rules.xlsx s3://cops-sox-evidence/"
+
+  - name: CleanupFolder
+    action: aws:runShellScript
+    inputs:
+      runCommand:
+        - "rm -rf /tmp/IT.MA.03.LinuxServers/"
