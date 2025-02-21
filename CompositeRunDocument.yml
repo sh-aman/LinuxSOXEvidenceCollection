@@ -1,0 +1,36 @@
+schemaVersion: '2.2'
+description: "SSM Document to manage folder, run remote script, upload to S3, and cleanup."
+mainSteps:
+  - name: CreateFolder
+    action: aws:runShellScript
+    inputs:
+      runCommand:
+        - "rm -rf /tmp/IT.MA.03.LinuxServers/"
+        - "mkdir -p /tmp/IT.MA.03.LinuxServers/"
+
+  - name: RunGitHubScript
+    action: aws:runDocument
+    inputs:
+      DocumentName: "AWS-RunRemoteScript"
+      Parameters:
+        sourceType: "GitHub"
+        sourceInfo: |
+          {
+            "owner": "your-github-org-or-user",
+            "repository": "your-repo-name",
+            "path": "your-script.py",
+            "tokenInfo": "your-github-token-secret-name"
+          }
+        commandLine: "python3 your-script.py"
+
+  - name: UploadToS3Bucket
+    action: aws:runShellScript
+    inputs:
+      runCommand:
+        - "aws s3 cp /tmp/IT.MA.03.LinuxServers/ s3://cops-sox-evidence/ --recursive --exclude '*' --include '*.xlsx'"
+
+  - name: Cleanup
+    action: aws:runShellScript
+    inputs:
+      runCommand:
+        - "rm -rf /tmp/IT.MA.03.LinuxServers/"
